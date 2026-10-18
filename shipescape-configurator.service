@@ -1,0 +1,13 @@
+[Unit]
+Description=配置wifi以及设备名、服务器地址
+After=network.target comitup.service
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/home/xzt/configurator
+ExecStart=/home/xzt/.local/bin/uv run main.py
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,20 @@
+[Unit]
+Description=ShipEscape terminal
+After=comitup.service network-online.target
+Wants=network-online.target
+
+[Service]
+User=xzt
+WorkingDirectory=/home/xzt/terminal
+Environment=PATH=/home/xzt/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStartPre=+/bin/sh -c 'until busctl --system call com.github.davesteele.comitup /com/github/davesteele/comitup com.github.davesteele.comitup state 2>/dev/null | grep -q "ss .CONNECTED"; do sleep 2; done'
+ExecStart=/usr/bin/env uv run main.py
+# 用 SIGINT 停止，让 main.py 的 finally 有机会关闭摄像头和毫米波
+KillSignal=SIGINT
+TimeoutStartSec=infinity
+TimeoutStopSec=20
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
