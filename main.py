@@ -13,6 +13,7 @@ DATA_DIR = "/home/xzt/terminal/data"
 PASSWORD = os.environ.get("PORTAL_PASSWORD", "")
 RESTART_CMD = "systemctl restart --no-block shipescape-terminal"
 BUS = "com.github.davesteele.comitup"
+ID_RE = re.compile(r"^[\w.-]{1,64}$", re.ASCII)
 ADDR_RE = re.compile(r"^[A-Za-z0-9.-]{1,253}:(\d{1,5})$")
 
 app = Flask(__name__, static_folder="static")
@@ -110,6 +111,9 @@ def api_config_set():
     addr = str(d.get("server_ip_port", "")).strip()
     ssid, pw = str(d.get("ssid", "")), str(d.get("password", ""))
 
+    # 设备 ID 校验：非空时只允许 字母/数字/下划线/点/短横线，长度 1~64 位
+    if did and not ID_RE.match(did):
+        return jsonify(error="设备 ID 只能包含字母、数字、下划线、点和短横线（最多 64 位）"), 400
     if not valid_addr(addr):
         return jsonify(error="服务器地址不能为空，格式为 主机:端口，例如 192.168.1.10:8080"), 400
     if ssid and pw and not 8 <= len(pw) <= 63:
