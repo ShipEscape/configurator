@@ -83,11 +83,10 @@ input { width: 100%; margin-top: 6px; padding: 8px 10px; border: 1px solid var(-
       <h2>终端设置</h2>
       <label>设备 ID
         <input id="did" autocomplete="off" spellcheck="false">
-        <small>留空则使用树莓派序列号</small>
       </label>
       <label>服务器地址
-        <input id="addr" autocomplete="off" spellcheck="false" placeholder="例如 192.168.1.10:8080">
-        <small>格式 主机:端口</small>
+        <input id="addr" autocomplete="off" spellcheck="false" placeholder="192.168.1.10:8080">
+        <small>[格式] 主机:端口</small>
       </label>
       <div class="btns">
         <button class="go" id="save">保存</button>
@@ -145,7 +144,7 @@ function buildList(points) {
 function render(d) {
   last = d;
   const ok = d.state === 'CONNECTED', cur = $('#cur');
-  cur.textContent = ok ? `已连接 ${d.connection}` : d.state === 'CONNECTING' ? `正在连接 ${d.connection || ''}` : '热点模式，尚未连接 Wi-Fi';
+  cur.textContent = ok ? `已连接 ${d.connection}` : d.state === 'CONNECTING' ? `正在连接 ${d.connection || ''}` : '尚未连接 Wi-Fi';
   cur.className = 'verdict ' + (ok ? 'ok' : d.state === 'CONNECTING' ? 'warn' : 'bad');
   const port = location.port && location.port !== '80' ? ':' + location.port : '';
   $('#hosts').textContent = d.hostnames.length ? '访问地址：' + d.hostnames.map(h => `http://${h}${port}`).join('　') : '';
@@ -171,7 +170,7 @@ $('#refresh').onclick = () => { picked = null; poll(); };
 const msg = (t, cls = '') => { const m = $('#cfgmsg'); m.textContent = t; m.className = 'note ' + cls; };
 async function loadCfg() {
   const c = await api('/api/config'); if (!c) return;
-  $('#did').value = c.device_id; $('#did').placeholder = c.serial ? `留空使用序列号 ${c.serial}` : '设备 ID';
+  $('#did').value = c.device_id;
   $('#addr').value = c.server_ip_port;
 }
 $('#test').onclick = async () => {

@@ -6,6 +6,7 @@ import socket
 import subprocess
 import threading
 import time
+
 import dbus
 from flask import Flask, Response, jsonify, redirect, request, send_from_directory
 
@@ -18,10 +19,37 @@ ADDR_RE = re.compile(r"^[A-Za-z0-9.-]{1,253}:(\d{1,5})$")
 
 app = Flask(__name__, static_folder="static")
 
+def get_current_portal_host() -> str:
+    """动态获取当前面向该客户端的真实服务端 IP:Port"""
+    host = request.host.split(":")[0]
+
+    # 如果请求头已经是 IP、.local 域名或 localhost，说明客户端已经完成了重定向，直接使用
+    if re.match(r"^(?:\d{1,3}\.){3}\d{1,3}$", host) or host.endswith(".local") or host == "localhost":
+        return request.host
+
+    # 客户端通过外部域名访问
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect((request.remote_addr or "8.8.8.8", 80))
+            local_ip = s.getsockname()[0]
+    except OSError:
+        local_ip = socket.gethostbyname(socket.gethostname())
+
+    port = request.environ.get("SERVER_PORT", "80")
+    return f"{local_ip}:{port}" if port not in ("80", "443") else local_ip
+
+def is_local_request() -> bool:
+    """判断请求是否已经访问在本机服务域名/IP 下。"""
+    host = request.host.split(":")[0]
+    return bool(re.match(r"^(?:\d{1,3}\.){3}\d{1,3}$", host) or host.endswith(".local") or host == "localhost")
+
 
 @app.before_request
-def auth():
-    if PASSWORD:
+def portal_gateway_dispatch():
+    if not is_local_request():
+        return redirect(f"http://{get_current_portal_host()}/", code=302)
+
+    if PASSWORD and request.path.startswith("/api/"):
         a = request.authorization
         if not (a and hmac.compare_digest(a.password or "", PASSWORD)):
             return Response("需要密码", 401, {"WWW-Authenticate": 'Basic realm="portal"'})
@@ -147,7 +175,10 @@ def index():
 
 @app.errorhandler(404)
 def fallback(_):
-    return jsonify(error="未找到"), 404 if request.path.startswith("/api/") else redirect("/")
+    if request.path.startswith("/api/"):
+        return jsonify(error="未找到"), 404
+
+    return redirect(f"http://{get_current_portal_host()}/", code=302)
 
 
 if __name__ == "__main__":
